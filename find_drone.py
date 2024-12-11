@@ -4,6 +4,7 @@ import os
 import yaml
 import json
 import shutil
+import sys
 from ultralytics import YOLO
 
 class DroneFinding:
@@ -168,6 +169,16 @@ class DroneFinding:
             if not ret:
                 break
 
+            # 현재 처리된 프레임 인덱스와 총 프레임 수 계산
+            current_frame = int(cap.get(cv2.CAP_PROP_POS_FRAMES))
+            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+            # 진행 상황 출력
+            progress = f"Processing frame {current_frame}/{total_frames} ({(current_frame/total_frames)*100:.2f}%)"
+            sys.stdout.write("\r" + progress)  # \r로 줄 바꿈 없이 같은 줄에 덮어씌움
+            sys.stdout.flush()
+
+            # YOLO 모델로 예측
             results = model.predict(source=frame, stream=True)
 
             for result in results:
@@ -181,6 +192,7 @@ class DroneFinding:
                     cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                     cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
+            # 프레임 저장
             out.write(frame)
 
         cap.release()
