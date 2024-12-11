@@ -100,29 +100,67 @@ class DroneFinding:
             save=True,                 # Ensure best model is saved
             save_period=-1,            # Save only the best model
         )
+
+        # 실제 저장된 디렉토리 경로 확인
+        actual_save_dir = model.trainer.args.save_dir
+        best_model_path = os.path.join(actual_save_dir, "weights", "best.pt")
         
-        # 기본 베스트 모델 경로
-        default_best_model_path = os.path.join(project, name, "weights", "best.pt")
-        
-        # 사용자 지정 경로가 있으면 이동
+        # 사용자 정의 경로로 이동 (필요 시)
         if self.path_best_model:
-            if os.path.exists(default_best_model_path):
-                shutil.move(default_best_model_path, self.path_best_model)
+            if os.path.exists(best_model_path):
+                shutil.move(best_model_path, self.path_best_model)
                 print(f"Best model moved to: {self.path_best_model}")
             else:
-                print(f"Default best model not found at: {default_best_model_path}")
+                print(f"Default best model not found at: {best_model_path}")
         else:
-            print(f"Best model saved at: {default_best_model_path}")
+            print(f"Best model saved at: {best_model_path}")
 
     def detect_and_draw(self, video_path):
-        model = YOLO(self.path_best_model)
-        cap = cv2.VideoCapture(video_path)
+        # 1. 비디오 파일 존재 여부 확인
+        if not os.path.exists(video_path):
+            print(f"Error: Video file not found at {video_path}")
+            return
 
+        # 2. 비디오 파일 열기
+        cap = cv2.VideoCapture(video_path)
+        if not cap.isOpened():
+            print(f"Error: Unable to open video file at {video_path}")
+            return
+
+        # 3. 비디오 속성 확인
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        fps = int(cap.get(cv2.CAP_PROP_FPS))
+        fps = cap.get(cv2.CAP_PROP_FPS)
 
+        if fps == 0 or width == 0 or height == 0:
+            print("Error: Video file properties could not be determined. Check if the file is corrupted.")
+            cap.release()
+            return
+
+        print(f"Video properties - Width: {width}, Height: {height}, FPS: {fps}")
+
+        # 4. 비디오 코덱 설정 및 확인
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        codec_test_path = "codec_test.mp4"
+        codec_test = cv2.VideoWriter(codec_test_path, fourcc, fps, (width, height))
+
+        if not codec_test.isOpened():
+            print("Error: Required codec (mp4v) is not installed or supported.")
+            cap.release()
+            return
+        else:
+            print("Codec test passed. Codec is supported.")
+            codec_test.release()
+            if os.path.exists(codec_test_path):
+                os.remove(codec_test_path)
+
+        # 5. YOLO 모델 로드
+        if not os.path.exists(self.path_best_model):
+            print(f"Error: Best model file not found at {self.path_best_model}")
+            cap.release()
+            return
+
+        model = YOLO(self.path_best_model)
         out = cv2.VideoWriter(self.path_output_video, fourcc, fps, (width, height))
 
         while cap.isOpened():
@@ -144,10 +182,6 @@ class DroneFinding:
                     cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
             out.write(frame)
-            cv2.imshow('Drone Detection', frame)
-
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
 
         cap.release()
         out.release()
