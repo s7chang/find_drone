@@ -3,6 +3,7 @@ import cv2
 import os
 import yaml
 import json
+import shutil
 from ultralytics import YOLO
 
 class DroneFinding:
@@ -81,7 +82,7 @@ class DroneFinding:
             json.dump(data, json_file, indent=4)
         print(f"JSON file created at {json_path}")
 
-    def fine_tune_yolo(self, data_yaml, project, name, epochs=30, batch_size=32, optimizer='AdamW', patience=5, img_size=832):
+    def fine_tune_yolo(self, data_yaml, project, name, epochs=30, batch_size=32, optimizer='AdamW', patience=5, img_size=832, custom_best_model_path=None):
         model = YOLO(self.pre_trained_model_name)
         model.train(
             data=data_yaml,
@@ -91,13 +92,27 @@ class DroneFinding:
             exist_ok=False,
             seed=42,
             optimizer=optimizer,
-            patience=patience,
+            patience=patience,         # Early stopping patience
             batch=batch_size,
             imgsz=img_size,
             degrees=0.15,
-            fliplr=0
+            fliplr=0,
+            save=True,                 # Ensure best model is saved
+            save_period=-1,            # Save only the best model
         )
-        print(f"Model fine-tuned and saved under project {project}, experiment {name}")
+        
+        # 기본 베스트 모델 경로
+        default_best_model_path = os.path.join(project, name, "weights", "best.pt")
+        
+        # 사용자 지정 경로가 있으면 이동
+        if self.path_best_model:
+            if os.path.exists(default_best_model_path):
+                shutil.move(default_best_model_path, self.path_best_model)
+                print(f"Best model moved to: {self.path_best_model}")
+            else:
+                print(f"Default best model not found at: {default_best_model_path}")
+        else:
+            print(f"Best model saved at: {default_best_model_path}")
 
     def detect_and_draw(self, video_path):
         model = YOLO(self.path_best_model)
