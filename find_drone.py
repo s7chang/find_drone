@@ -164,11 +164,8 @@ class DroneFinding:
         model = YOLO(self.path_best_model)
         out = cv2.VideoWriter(self.path_output_video, fourcc, fps, (width, height))
 
-        print(f'open result = {cap.isOpened()}')
-
         while cap.isOpened():
             ret, frame = cap.read()
-            print(f'ret = {ret}')
             if not ret:
                 break
 
