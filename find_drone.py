@@ -188,9 +188,9 @@ class DroneFinding:
 
                 for box, conf, cls in zip(boxes, confidences, classes):
                     x1, y1, x2, y2 = map(int, box)
-                    label = f"{int(cls)}: {conf:.2f}"
+                    label = f"conf: {conf:.2f}"
                     cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                    cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                    cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 0), 2)
 
             # 프레임 저장
             out.write(frame)
